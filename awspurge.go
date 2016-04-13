@@ -28,7 +28,7 @@ type Config struct {
 	List bool `toml:"list" json:"list"`
 }
 
-type resources struct {
+type Resources struct {
 	instances        []*ec2.Instance
 	volumes          []*ec2.Volume
 	keyPairs         []*ec2.KeyPairInfo
@@ -45,13 +45,13 @@ type resources struct {
 }
 
 type Purge struct {
-	services *multiRegion
-	regions  []string // our own defined regions
-	list     bool     // only list, do not terminate if enabled
+	Services *multiRegion
+	Regions  []string // our own defined regions
+	List     bool     // only list, do not terminate if enabled
 
 	// resources represents the current available resources per region. It's
 	// populated by the Fetch() method.
-	resources  map[string]*resources
+	Resources  map[string]*Resources
 	resourceMu sync.Mutex // protects resources
 
 	// fetch synchronization
@@ -96,19 +96,19 @@ func New(conf *Config) (*Purge, error) {
 	}
 
 	regions := filterRegions(conf.Regions, conf.RegionsExclude)
-	m := newMultiRegion(awsCfg, regions)
+	m := NewMultiRegion(awsCfg, regions)
 
 	// initialize resources
-	res := make(map[string]*resources, 0)
+	res := make(map[string]*Resources, 0)
 	for _, region := range regions {
-		res[region] = &resources{}
+		res[region] = &Resources{}
 	}
 
 	return &Purge{
-		services:  m,
-		resources: res,
-		regions:   regions,
-		list:      conf.List,
+		Services:  m,
+		Resources: res,
+		Regions:   regions,
+		List:      conf.List,
 	}, nil
 }
 
@@ -123,7 +123,7 @@ func (p *Purge) Do() error {
 		return err
 	}
 
-	if p.list {
+	if p.List {
 		return nil
 	}
 
@@ -137,7 +137,7 @@ func (p *Purge) Do() error {
 
 // Print prints all fetched resources
 func (p *Purge) Print() error {
-	for region, resources := range p.resources {
+	for region, resources := range p.Resources {
 		fmt.Println("REGION:", region)
 		fmt.Printf("\t'%d' instances\n", len(resources.instances))
 		fmt.Printf("\t'%d' volumes\n", len(resources.volumes))

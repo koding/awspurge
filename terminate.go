@@ -17,7 +17,7 @@ func (p *Purge) terminateEC2Resources(fn func(*ec2.EC2) error) {
 	// we don't need to wait for each region independently
 	var wg sync.WaitGroup
 
-	for _, s := range p.services.ec2 {
+	for _, s := range p.Services.EC2 {
 		wg.Add(1)
 
 		go func(svc *ec2.EC2) {
@@ -38,7 +38,7 @@ func (p *Purge) terminateELBResources(fn func(*elb.ELB) error) {
 	// we don't need to wait for each region independently
 	var wg sync.WaitGroup
 
-	for _, s := range p.services.elb {
+	for _, s := range p.Services.ELB {
 		wg.Add(1)
 
 		go func(svc *elb.ELB) {
@@ -60,7 +60,7 @@ func (p *Purge) DeleteInstances() {
 	fn := func(svc *ec2.EC2) error {
 		region := *svc.Config.Region
 
-		resources, ok := p.resources[region]
+		resources, ok := p.Resources[region]
 		if !ok {
 			return fmt.Errorf("Couldn't find resources for region %s", region)
 		}
@@ -94,7 +94,7 @@ func (p *Purge) DeleteVolumes() {
 	fn := func(svc *ec2.EC2) error {
 		region := *svc.Config.Region
 
-		resources, ok := p.resources[region]
+		resources, ok := p.Resources[region]
 		if !ok {
 			return fmt.Errorf("Couldn't find resources for region %s", region)
 		}
@@ -135,7 +135,7 @@ func (p *Purge) DeleteKeyPairs() {
 	fn := func(svc *ec2.EC2) error {
 		region := *svc.Config.Region
 
-		resources, ok := p.resources[region]
+		resources, ok := p.Resources[region]
 		if !ok {
 			return fmt.Errorf("Couldn't find resources for region %s", region)
 		}
@@ -176,7 +176,7 @@ func (p *Purge) DeletePlacementGroups() {
 	fn := func(svc *ec2.EC2) error {
 		region := *svc.Config.Region
 
-		resources, ok := p.resources[region]
+		resources, ok := p.Resources[region]
 		if !ok {
 			return fmt.Errorf("Couldn't find resources for region %s", region)
 		}
@@ -217,7 +217,7 @@ func (p *Purge) DeleteAddresses() {
 	fn := func(svc *ec2.EC2) error {
 		region := *svc.Config.Region
 
-		resources, ok := p.resources[region]
+		resources, ok := p.Resources[region]
 		if !ok {
 			return fmt.Errorf("Couldn't find resources for region %s", region)
 		}
@@ -258,7 +258,7 @@ func (p *Purge) DeleteSnapshots() {
 	fn := func(svc *ec2.EC2) error {
 		region := *svc.Config.Region
 
-		resources, ok := p.resources[region]
+		resources, ok := p.Resources[region]
 		if !ok {
 			return fmt.Errorf("Couldn't find resources for region %s", region)
 		}
@@ -299,7 +299,7 @@ func (p *Purge) DeleteLoadBalancers() {
 	fn := func(svc *elb.ELB) error {
 		region := *svc.Config.Region
 
-		resources, ok := p.resources[region]
+		resources, ok := p.Resources[region]
 		if !ok {
 			return fmt.Errorf("Couldn't find resources for region %s", region)
 		}
@@ -341,7 +341,7 @@ func (p *Purge) DeleteVPCs() {
 	fn := func(svc *ec2.EC2) error {
 		region := *svc.Config.Region
 
-		resources, ok := p.resources[region]
+		resources, ok := p.Resources[region]
 		if !ok {
 			return fmt.Errorf("Couldn't find resources for region %s", region)
 		}
@@ -371,7 +371,7 @@ func (p *Purge) DeleteSubnets() {
 	fn := func(svc *ec2.EC2) error {
 		region := *svc.Config.Region
 
-		resources, ok := p.resources[region]
+		resources, ok := p.Resources[region]
 		if !ok {
 			return fmt.Errorf("Couldn't find resources for region %s", region)
 		}
@@ -412,7 +412,7 @@ func (p *Purge) DeleteSecurityGroups() {
 	fn := func(svc *ec2.EC2) error {
 		region := *svc.Config.Region
 
-		resources, ok := p.resources[region]
+		resources, ok := p.Resources[region]
 		if !ok {
 			return fmt.Errorf("Couldn't find resources for region %s", region)
 		}
@@ -453,7 +453,7 @@ func (p *Purge) DeleteNetworkAcls() {
 	fn := func(svc *ec2.EC2) error {
 		region := *svc.Config.Region
 
-		resources, ok := p.resources[region]
+		resources, ok := p.Resources[region]
 		if !ok {
 			return fmt.Errorf("Couldn't find resources for region %s", region)
 		}
@@ -495,7 +495,7 @@ func (p *Purge) DeleteInternetGateways() {
 	fn := func(svc *ec2.EC2) error {
 		region := *svc.Config.Region
 
-		resources, ok := p.resources[region]
+		resources, ok := p.Resources[region]
 		if !ok {
 			return fmt.Errorf("Couldn't find resources for region %s", region)
 		}
@@ -534,7 +534,7 @@ func (p *Purge) DeleteRouteTables() {
 	fn := func(svc *ec2.EC2) error {
 		region := *svc.Config.Region
 
-		resources, ok := p.resources[region]
+		resources, ok := p.Resources[region]
 		if !ok {
 			return fmt.Errorf("Couldn't find resources for region %s", region)
 		}
