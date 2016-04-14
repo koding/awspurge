@@ -24,21 +24,21 @@ var allRegions = []string{
 }
 
 type multiRegion struct {
-	ec2 map[string]*ec2.EC2
-	elb map[string]*elb.ELB
+	EC2 map[string]*ec2.EC2
+	ELB map[string]*elb.ELB
 }
 
-func newMultiRegion(conf *aws.Config, regions []string) *multiRegion {
+func NewMultiRegion(conf *aws.Config, regions []string) *multiRegion {
 	m := &multiRegion{
-		ec2: make(map[string]*ec2.EC2, 0),
-		elb: make(map[string]*elb.ELB, 0),
+		EC2: make(map[string]*ec2.EC2, 0),
+		ELB: make(map[string]*elb.ELB, 0),
 	}
 
 	for _, region := range regions {
 		// conf.MergeIn(&aws.Config{Region: aws.String(region)})
 		sess := session.New(conf, &aws.Config{Region: aws.String(region)})
-		m.ec2[region] = ec2.New(sess)
-		m.elb[region] = elb.New(sess)
+		m.EC2[region] = ec2.New(sess)
+		m.ELB[region] = elb.New(sess)
 	}
 
 	return m

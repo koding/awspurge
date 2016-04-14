@@ -8,7 +8,7 @@ import (
 )
 
 func (p *Purge) fetchELBResources(fn func(*elb.ELB) error) {
-	for _, s := range p.services.elb {
+	for _, s := range p.Services.ELB {
 		p.fetchWg.Add(1)
 
 		go func(svc *elb.ELB) {
@@ -25,7 +25,7 @@ func (p *Purge) fetchELBResources(fn func(*elb.ELB) error) {
 }
 
 func (p *Purge) fetchEC2Resources(fn func(*ec2.EC2) error) {
-	for _, s := range p.services.ec2 {
+	for _, s := range p.Services.EC2 {
 		p.fetchWg.Add(1)
 
 		go func(svc *ec2.EC2) {
@@ -60,7 +60,7 @@ func (p *Purge) FetchInstances() {
 		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
-		p.resources[region].instances = instances
+		p.Resources[region].instances = instances
 		p.resourceMu.Unlock()
 		return nil
 	}
@@ -79,7 +79,7 @@ func (p *Purge) FetchVolumes() {
 		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
-		p.resources[region].volumes = volumes
+		p.Resources[region].volumes = volumes
 		p.resourceMu.Unlock()
 		return nil
 	}
@@ -98,7 +98,7 @@ func (p *Purge) FetchKeyPairs() {
 		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
-		p.resources[region].keyPairs = resources
+		p.Resources[region].keyPairs = resources
 		p.resourceMu.Unlock()
 		return nil
 	}
@@ -117,7 +117,7 @@ func (p *Purge) FetchPlacementGroups() {
 		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
-		p.resources[region].placementGroups = resources
+		p.Resources[region].placementGroups = resources
 		p.resourceMu.Unlock()
 		return nil
 	}
@@ -136,7 +136,7 @@ func (p *Purge) FetchAddresses() {
 		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
-		p.resources[region].addresses = resources
+		p.Resources[region].addresses = resources
 		p.resourceMu.Unlock()
 		return nil
 	}
@@ -159,7 +159,7 @@ func (p *Purge) FetchSnapshots() {
 		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
-		p.resources[region].snapshots = resources
+		p.Resources[region].snapshots = resources
 		p.resourceMu.Unlock()
 		return nil
 	}
@@ -178,7 +178,7 @@ func (p *Purge) FetchSecurityGroups() {
 		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
-		p.resources[region].securityGroups = resources
+		p.Resources[region].securityGroups = resources
 		p.resourceMu.Unlock()
 		return nil
 	}
@@ -197,7 +197,7 @@ func (p *Purge) FetchLoadBalancers() {
 		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
-		p.resources[region].loadBalancers = loadBalancers
+		p.Resources[region].loadBalancers = loadBalancers
 		p.resourceMu.Unlock()
 		return nil
 	}
@@ -223,7 +223,7 @@ func (p *Purge) FetchVpcs() {
 		}
 
 		p.resourceMu.Lock()
-		p.resources[region].vpcs = vpcs
+		p.Resources[region].vpcs = vpcs
 		p.resourceMu.Unlock()
 		return nil
 	}
@@ -242,7 +242,7 @@ func (p *Purge) FetchSubnets() {
 		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
-		p.resources[region].subnets = resources
+		p.Resources[region].subnets = resources
 		p.resourceMu.Unlock()
 		return nil
 	}
@@ -261,7 +261,7 @@ func (p *Purge) FetchNetworkAcls() {
 		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
-		p.resources[region].networkAcls = resources
+		p.Resources[region].networkAcls = resources
 		p.resourceMu.Unlock()
 		return nil
 	}
@@ -280,7 +280,7 @@ func (p *Purge) FetchInternetGateways() {
 		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
-		p.resources[region].internetGateways = resources
+		p.Resources[region].internetGateways = resources
 		p.resourceMu.Unlock()
 		return nil
 	}
@@ -299,7 +299,7 @@ func (p *Purge) FetchRouteTables() {
 		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
-		p.resources[region].routeTables = resources
+		p.Resources[region].routeTables = resources
 		p.resourceMu.Unlock()
 		return nil
 	}
