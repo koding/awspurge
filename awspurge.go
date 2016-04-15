@@ -44,6 +44,16 @@ type resources struct {
 	routeTables      []*ec2.RouteTable
 }
 
+type Filters struct {
+	Instance []InstanceFilter
+	KeyPair  []KeyPairFilter
+	Vpc      []VpcFilter
+}
+
+type InstanceFilter func(*ec2.Instance) bool
+type KeyPairFilter func(*ec2.KeyPairInfo) bool
+type VpcFilter func(*ec2.Vpc) bool
+
 type Purge struct {
 	services *multiRegion
 	regions  []string // our own defined regions
@@ -53,6 +63,8 @@ type Purge struct {
 	// populated by the Fetch() method.
 	resources  map[string]*resources
 	resourceMu sync.Mutex // protects resources
+
+	filters *Filters
 
 	// fetch synchronization
 	fetchWg   sync.WaitGroup
@@ -123,6 +135,7 @@ func NewPurge(awsConfig *aws.Config, regions []string, filters *Filters, list bo
 		regions:   regions,
 		services:  newMultiRegion(awsConfig, regions),
 		resources: res,
+		filters:   filters,
 	}
 }
 
