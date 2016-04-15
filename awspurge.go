@@ -173,22 +173,32 @@ func (p *Purge) Print() error {
 // Fetch fetches all given resources and stores them internally. To print them
 // use the Print() method
 func (p *Purge) Fetch() error {
-	// EC2
+	p.FetchVpcs()
+
+	// Subnets and instances are fetched based on VPC ids
+	p.fetchWg.Wait()
+
+	p.FetchSubnets()
 	p.FetchInstances()
+
+	// Rest of the resource types depend on VPC, subnet and instance ids
+	p.fetchWg.Wait()
+
+	// VPC
+	p.FetchSecurityGroups()
+	p.FetchInternetGateways()
+
+	// Subnet
+	p.FetchNetworkAcls()
+	p.FetchRouteTables()
+
+	// EC2
 	p.FetchVolumes()
 	p.FetchKeyPairs()
 	p.FetchPlacementGroups()
 	p.FetchAddresses()
 	p.FetchSnapshots()
 	p.FetchLoadBalancers()
-
-	// VPC
-	p.FetchVpcs()
-	p.FetchSubnets()
-	p.FetchSecurityGroups()
-	p.FetchNetworkAcls()
-	p.FetchInternetGateways()
-	p.FetchRouteTables()
 
 	p.fetchWg.Wait()
 	return p.fetchErrs
