@@ -112,6 +112,20 @@ func New(conf *Config) (*Purge, error) {
 	}, nil
 }
 
+func NewPurge(awsConfig *aws.Config, regions []string, filters *Filters, list bool) *Purge {
+	res := make(map[string]*resources, 0)
+	for _, region := range regions {
+		res[region] = &resources{}
+	}
+
+	return &Purge{
+		list:      list,
+		regions:   regions,
+		services:  newMultiRegion(awsConfig, regions),
+		resources: res,
+	}
+}
+
 func (p *Purge) Do() error {
 	log.Println("Fetching resources")
 	if err := p.Fetch(); err != nil {
