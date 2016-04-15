@@ -44,6 +44,16 @@ type resources struct {
 	routeTables      []*ec2.RouteTable
 }
 
+type Filters struct {
+	Instance []InstanceFilter
+	KeyPair  []KeyPairFilter
+	Vpc      []VpcFilter
+}
+
+type InstanceFilter func(*ec2.Instance) bool
+type KeyPairFilter func(*ec2.KeyPairInfo) bool
+type VpcFilter func(*ec2.Vpc) bool
+
 type Purge struct {
 	services *multiRegion
 	regions  []string // our own defined regions
@@ -53,6 +63,8 @@ type Purge struct {
 	// populated by the Fetch() method.
 	resources  map[string]*resources
 	resourceMu sync.Mutex // protects resources
+
+	filters *Filters
 
 	// fetch synchronization
 	fetchWg   sync.WaitGroup
@@ -112,6 +124,21 @@ func New(conf *Config) (*Purge, error) {
 	}, nil
 }
 
+func NewPurge(awsConfig *aws.Config, regions []string, filters *Filters, list bool) *Purge {
+	res := make(map[string]*resources, 0)
+	for _, region := range regions {
+		res[region] = &resources{}
+	}
+
+	return &Purge{
+		list:      list,
+		regions:   regions,
+		services:  newMultiRegion(awsConfig, regions),
+		resources: res,
+		filters:   filters,
+	}
+}
+
 func (p *Purge) Do() error {
 	log.Println("Fetching resources")
 	if err := p.Fetch(); err != nil {
@@ -159,22 +186,32 @@ func (p *Purge) Print() error {
 // Fetch fetches all given resources and stores them internally. To print them
 // use the Print() method
 func (p *Purge) Fetch() error {
-	// EC2
+	p.FetchVpcs()
+
+	// Subnets and instances are fetched based on VPC ids
+	p.fetchWg.Wait()
+
+	p.FetchSubnets()
 	p.FetchInstances()
+
+	// Rest of the resource types depend on VPC, subnet and instance ids
+	p.fetchWg.Wait()
+
+	// VPC
+	p.FetchSecurityGroups()
+	p.FetchInternetGateways()
+
+	// Subnet
+	p.FetchNetworkAcls()
+	p.FetchRouteTables()
+
+	// EC2
 	p.FetchVolumes()
 	p.FetchKeyPairs()
 	p.FetchPlacementGroups()
 	p.FetchAddresses()
 	p.FetchSnapshots()
 	p.FetchLoadBalancers()
-
-	// VPC
-	p.FetchVpcs()
-	p.FetchSubnets()
-	p.FetchSecurityGroups()
-	p.FetchNetworkAcls()
-	p.FetchInternetGateways()
-	p.FetchRouteTables()
 
 	p.fetchWg.Wait()
 	return p.fetchErrs

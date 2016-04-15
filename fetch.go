@@ -43,7 +43,12 @@ func (p *Purge) fetchEC2Resources(fn func(*ec2.EC2) error) {
 
 func (p *Purge) FetchInstances() {
 	fn := func(svc *ec2.EC2) error {
-		resp, err := svc.DescribeInstances(nil)
+		region := *svc.Config.Region
+		params := &ec2.DescribeInstancesInput{
+			Filters: []*ec2.Filter{p.getVpcIdFilter(region, "vpc-id")},
+		}
+
+		resp, err := svc.DescribeInstances(params)
 		if err != nil {
 			return err
 		}
@@ -51,13 +56,28 @@ func (p *Purge) FetchInstances() {
 		instances := make([]*ec2.Instance, 0)
 		if resp.Reservations != nil {
 			for _, reserv := range resp.Reservations {
-				if len(reserv.Instances) != 0 {
+				if len(reserv.Instances) == 0 {
+					continue
+				}
+
+				filters := p.filters.Instance
+				if len(filters) == 0 {
 					instances = append(instances, reserv.Instances...)
+				}
+				for _, instance := range reserv.Instances {
+					match := true
+					for _, filter := range filters {
+						if !filter(instance) {
+							match = false
+							break
+						}
+					}
+					if match {
+						instances = append(instances, instance)
+					}
 				}
 			}
 		}
-
-		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
 		p.resources[region].instances = instances
@@ -70,13 +90,22 @@ func (p *Purge) FetchInstances() {
 
 func (p *Purge) FetchVolumes() {
 	fn := func(svc *ec2.EC2) error {
-		resp, err := svc.DescribeVolumes(nil)
+		region := *svc.Config.Region
+		params := &ec2.DescribeVolumesInput{
+			Filters: []*ec2.Filter{
+				{
+					Name:   aws.String("attachment.instance-id"),
+					Values: p.getInstanceIds(region),
+				},
+			},
+		}
+
+		resp, err := svc.DescribeVolumes(params)
 		if err != nil {
 			return err
 		}
 
 		volumes := resp.Volumes
-		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
 		p.resources[region].volumes = volumes
@@ -94,8 +123,26 @@ func (p *Purge) FetchKeyPairs() {
 			return err
 		}
 
-		resources := resp.KeyPairs
+		var resources []*ec2.KeyPairInfo
 		region := *svc.Config.Region
+
+		filters := p.filters.KeyPair
+		if len(filters) == 0 {
+			resources = resp.KeyPairs
+		} else {
+			for _, keyPair := range resp.KeyPairs {
+				match := true
+				for _, filter := range filters {
+					if !filter(keyPair) {
+						match = false
+						break
+					}
+				}
+				if match {
+					resources = append(resources, keyPair)
+				}
+			}
+		}
 
 		p.resourceMu.Lock()
 		p.resources[region].keyPairs = resources
@@ -127,13 +174,22 @@ func (p *Purge) FetchPlacementGroups() {
 
 func (p *Purge) FetchAddresses() {
 	fn := func(svc *ec2.EC2) error {
-		resp, err := svc.DescribeAddresses(nil)
+		region := *svc.Config.Region
+		params := &ec2.DescribeAddressesInput{
+			Filters: []*ec2.Filter{
+				{
+					Name:   aws.String("instance-id"),
+					Values: p.getInstanceIds(region),
+				},
+			},
+		}
+
+		resp, err := svc.DescribeAddresses(params)
 		if err != nil {
 			return err
 		}
 
 		resources := resp.Addresses
-		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
 		p.resources[region].addresses = resources
@@ -169,13 +225,17 @@ func (p *Purge) FetchSnapshots() {
 
 func (p *Purge) FetchSecurityGroups() {
 	fn := func(svc *ec2.EC2) error {
-		resp, err := svc.DescribeSecurityGroups(nil)
+		region := *svc.Config.Region
+		params := &ec2.DescribeSecurityGroupsInput{
+			Filters: []*ec2.Filter{p.getVpcIdFilter(region, "vpc-id")},
+		}
+
+		resp, err := svc.DescribeSecurityGroups(params)
 		if err != nil {
 			return err
 		}
 
 		resources := resp.SecurityGroups
-		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
 		p.resources[region].securityGroups = resources
@@ -213,12 +273,28 @@ func (p *Purge) FetchVpcs() {
 		}
 
 		region := *svc.Config.Region
+		filters := p.filters.Vpc
 
 		vpcs := make([]*ec2.Vpc, 0)
 		for _, vpc := range resp.Vpcs {
 			// don't delete default vpc
-			if !*vpc.IsDefault {
+			if *vpc.IsDefault {
+				continue
+			}
+
+			if len(filters) == 0 {
 				vpcs = append(vpcs, vpc)
+			} else {
+				match := true
+				for _, filter := range filters {
+					if !filter(vpc) {
+						match = false
+						break
+					}
+				}
+				if match {
+					vpcs = append(vpcs, vpc)
+				}
 			}
 		}
 
@@ -233,13 +309,17 @@ func (p *Purge) FetchVpcs() {
 
 func (p *Purge) FetchSubnets() {
 	fn := func(svc *ec2.EC2) error {
-		resp, err := svc.DescribeSubnets(nil)
+		region := *svc.Config.Region
+		params := &ec2.DescribeSubnetsInput{
+			Filters: []*ec2.Filter{p.getVpcIdFilter(region, "vpc-id")},
+		}
+
+		resp, err := svc.DescribeSubnets(params)
 		if err != nil {
 			return err
 		}
 
 		resources := resp.Subnets
-		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
 		p.resources[region].subnets = resources
@@ -252,13 +332,17 @@ func (p *Purge) FetchSubnets() {
 
 func (p *Purge) FetchNetworkAcls() {
 	fn := func(svc *ec2.EC2) error {
-		resp, err := svc.DescribeNetworkAcls(nil)
+		region := *svc.Config.Region
+		params := &ec2.DescribeNetworkAclsInput{
+			Filters: []*ec2.Filter{p.getSubnetIdFilter(region, "association.subnet-id")},
+		}
+
+		resp, err := svc.DescribeNetworkAcls(params)
 		if err != nil {
 			return err
 		}
 
 		resources := resp.NetworkAcls
-		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
 		p.resources[region].networkAcls = resources
@@ -271,13 +355,17 @@ func (p *Purge) FetchNetworkAcls() {
 
 func (p *Purge) FetchInternetGateways() {
 	fn := func(svc *ec2.EC2) error {
-		resp, err := svc.DescribeInternetGateways(nil)
+		region := *svc.Config.Region
+		params := &ec2.DescribeInternetGatewaysInput{
+			Filters: []*ec2.Filter{p.getVpcIdFilter(region, "attachment.vpc-id")},
+		}
+
+		resp, err := svc.DescribeInternetGateways(params)
 		if err != nil {
 			return err
 		}
 
 		resources := resp.InternetGateways
-		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
 		p.resources[region].internetGateways = resources
@@ -290,13 +378,17 @@ func (p *Purge) FetchInternetGateways() {
 
 func (p *Purge) FetchRouteTables() {
 	fn := func(svc *ec2.EC2) error {
-		resp, err := svc.DescribeRouteTables(nil)
+		region := *svc.Config.Region
+		params := &ec2.DescribeRouteTablesInput{
+			Filters: []*ec2.Filter{p.getSubnetIdFilter(region, "association.subnet-id")},
+		}
+
+		resp, err := svc.DescribeRouteTables(params)
 		if err != nil {
 			return err
 		}
 
 		resources := resp.RouteTables
-		region := *svc.Config.Region
 
 		p.resourceMu.Lock()
 		p.resources[region].routeTables = resources
@@ -305,6 +397,39 @@ func (p *Purge) FetchRouteTables() {
 	}
 
 	p.fetchEC2Resources(fn)
+}
+
+func (p *Purge) getVpcIdFilter(region string, name string) *ec2.Filter {
+	filters := &ec2.Filter{
+		Name:   aws.String(name),
+		Values: []*string{},
+	}
+
+	for _, vpc := range p.resources[region].vpcs {
+		filters.Values = append(filters.Values, vpc.VpcId)
+	}
+
+	return filters
+}
+
+func (p *Purge) getSubnetIdFilter(region string, name string) *ec2.Filter {
+	filters := &ec2.Filter{
+		Name:   aws.String(name),
+		Values: []*string{},
+	}
+
+	for _, subnet := range p.resources[region].subnets {
+		filters.Values = append(filters.Values, subnet.SubnetId)
+	}
+
+	return filters
+}
+
+func (p *Purge) getInstanceIds(region string) (ids []*string) {
+	for _, instance := range p.resources[region].instances {
+		ids = append(ids, instance.InstanceId)
+	}
+	return ids
 }
 
 // stringSlice is an helper method to convert a slice of strings into a slice
