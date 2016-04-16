@@ -234,9 +234,9 @@ func (p *Purge) Terminate() error {
 	p.DeleteSubnets()
 	p.DeleteInternetGateways()
 	p.DeleteSecurityGroups()
+	p.DeleteNetworkAcls()
 	p.DeleteRouteTables()
 	p.DeleteVPCs()
-	// p.DeleteNetworkAcls()
 
 	return p.deleteErrs
 }
